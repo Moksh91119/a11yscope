@@ -1,0 +1,159 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum ScanStatus {
+  QUEUED
+  INITIALIZING
+  CRAWLING
+  ANALYZING
+  GENERATING_REPORT
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum ScanType {
+  QUICK
+  WEBSITE
+  MONITORING
+}
+
+enum Severity {
+  CRITICAL
+  SERIOUS
+  MODERATE
+  MINOR
+}
+
+enum MonitoringFrequency {
+  DAILY
+}
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  passwordHash String
+  name         String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  projects     Project[]
+}
+
+model Project {
+  id          String    @id @default(cuid())
+  name        String
+  description String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  websites    Website[]
+
+  @@index([userId])
+}
+
+model Website {
+  id          String    @id @default(cuid())
+  name        String
+  url         String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  projectId   String
+  project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  scans       Scan[]
+
+  monitoring  Monitoring?
+
+  @@index([projectId])
+}
+
+model Scan {
+  id              String      @id @default(cuid())
+  type            ScanType
+  status          ScanStatus  @default(QUEUED)
+
+  score           Float?
+  pagesScanned    Int         @default(0)
+  pagesTotal      Int?
+  
+  startedAt       DateTime?
+  completedAt     DateTime?
+  errorMessage    String?
+
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  websiteId       String
+  website         Website     @relation(fields: [websiteId], references: [id], onDelete: Cascade)
+
+  pages           Page[]
+  violations      ViolationOccurrence[]
+
+  @@index([websiteId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model Page {
+  id          String    @id @default(cuid())
+  url         String
+  title       String?
+  statusCode  Int?
+  screenshot  String?
+
+  scanId      String
+  scan        Scan      @relation(fields: [scanId], references: [id], onDelete: Cascade)
+
+  violations  ViolationOccurrence[]
+
+  @@index([scanId])
+}
+
+model ViolationOccurrence {
+  id              String    @id @default(cuid())
+
+  ruleId          String
+  impact          Severity
+  description     String
+  help            String?
+  helpUrl         String?
+
+  wcagTags        String[]
+  selector        String?
+  html            String?
+
+  pageId          String
+  page            Page      @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  scanId          String
+  scan            Scan      @relation(fields: [scanId], references: [id], onDelete: Cascade)
+
+  @@index([scanId])
+  @@index([pageId])
+  @@index([ruleId])
+  @@index([impact])
+}
+
+model Monitoring {
+  id          String              @id @default(cuid())
+  enabled     Boolean             @default(true)
+  frequency   MonitoringFrequency @default(DAILY)
+  lastRunAt   DateTime?
+  nextRunAt   DateTime?
+
+  websiteId   String              @unique
+  website     Website             @relation(fields: [websiteId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+}
