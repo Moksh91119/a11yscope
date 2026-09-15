@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { scanUrl } from "../scanner/scan.service.js";
+import { scanWebsite } from "../scanner/scan.service.js";
 
 const router = Router();
 
@@ -13,7 +13,7 @@ router.post("/scan", async (req, res) => {
       });
     }
 
-    const result = await scanUrl(url);
+    const result = await scanWebsite(url, 10);
 
     return res.json(result);
   } catch (error) {

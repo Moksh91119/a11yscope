@@ -1,5 +1,5 @@
 import { prisma } from "@a11yscope/database";
-import { scanUrl } from "../../scanner/scan.service.js";
+import { scanWebsite } from "../../scanner/scan.service.js";
 
 export async function processScan(scanId: string) {
   const scan = await prisma.scan.findUnique({
@@ -31,40 +31,53 @@ export async function processScan(scanId: string) {
         id: scanId,
       },
       data: {
-        status: "ANALYZING",
+        status: "CRAWLING",
       },
     });
 
-    const result = await scanUrl(scan.website.url);
+    const result = await scanWebsite(scan.website.url, 10);
+
+    await prisma.scan.update({
+      where: {
+        id: scanId,
+      },
+      data: {
+        status: "ANALYZING",
+        pagesTotal: result.pages.length,
+      },
+    });
 
     await prisma.$transaction(async (tx) => {
-      const page = await tx.page.create({
-        data: {
-          url: result.url,
-          title: result.title,
-          scanId,
-        },
-      });
-
-      const occurrences = result.violations.flatMap((violation) =>
-        violation.nodes.map((node) => ({
-          ruleId: violation.id,
-          impact: mapImpact(violation.impact),
-          description: violation.description,
-          help: violation.help,
-          helpUrl: violation.helpUrl,
-          wcagTags: violation.tags,
-          selector: node.target.join(", "),
-          html: node.html,
-          pageId: page.id,
-          scanId,
-        })),
-      );
-
-      if (occurrences.length > 0) {
-        await tx.violationOccurrence.createMany({
-          data: occurrences,
+      for (const scannedPage of result.pages) {
+        const page = await tx.page.create({
+          data: {
+            url: scannedPage.url,
+            title: scannedPage.title,
+            scanId,
+          },
         });
+
+        const occurrences = scannedPage.results.violations.flatMap(
+          (violation) =>
+            violation.nodes.map((node) => ({
+              ruleId: violation.id,
+              impact: mapImpact(violation.impact),
+              description: violation.description,
+              help: violation.help,
+              helpUrl: violation.helpUrl,
+              wcagTags: violation.tags,
+              selector: node.target.join(", "),
+              html: node.html,
+              pageId: page.id,
+              scanId,
+            })),
+        );
+
+        if (occurrences.length > 0) {
+          await tx.violationOccurrence.createMany({
+            data: occurrences,
+          });
+        }
       }
 
       await tx.scan.update({
@@ -74,8 +87,8 @@ export async function processScan(scanId: string) {
         data: {
           status: "COMPLETED",
           score: result.score,
-          pagesScanned: 1,
-          pagesTotal: 1,
+          pagesScanned: result.pages.length,
+          pagesTotal: result.pages.length,
           completedAt: new Date(),
         },
       });
