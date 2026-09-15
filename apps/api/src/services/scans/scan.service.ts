@@ -45,6 +45,7 @@ export async function getScan(scanId: string, userId: string) {
           violations: true,
         },
       },
+      violations: true,
     },
   });
 }
