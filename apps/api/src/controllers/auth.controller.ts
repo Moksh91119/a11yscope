@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
 import { z } from "zod";
 import { loginUser, registerUser } from "../services/auth.service.js";
+import { prisma } from "@a11yscope/database";
 
 const authSchema = z.object({
   email: z.string().email(),
@@ -60,4 +61,32 @@ export async function login(req: Request, res: Response) {
       message: "Invalid email or password",
     });
   }
+}
+
+export async function getMe(req: Request, res: Response) {
+  if (!req.user) {
+    return res.status(401).json({
+      message: "Authentication required",
+    });
+  }
+
+  const user = await prisma.user.findUnique({
+    where: {
+      id: req.user.id,
+    },
+    select: {
+      id: true,
+      email: true,
+      name: true,
+      createdAt: true,
+    },
+  });
+
+  if (!user) {
+    return res.status(404).json({
+      message: "User not found",
+    });
+  }
+
+  return res.json({ user });
 }
