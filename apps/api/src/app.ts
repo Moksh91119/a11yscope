@@ -6,6 +6,7 @@ import authRoutes from "./routes/auth.routes.js";
 import projectRoutes from "./routes/project.routes.js";
 import websiteRoutes from "./routes/website.routes.js";
 import testRoutes from "./routes/test.routes.js";
+import scanRoutes from "./routes/scan.routes.js";
 
 const app = express();
 
@@ -30,5 +31,6 @@ app.use("/api/auth", authRoutes);
 app.use("/api/projects", projectRoutes);
 app.use("/api/websites", websiteRoutes);
 app.use("/api/test", testRoutes);
+app.use("/api/scans", scanRoutes);
 
 export default app;
