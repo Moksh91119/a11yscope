@@ -3,6 +3,8 @@ import express from "express";
 import helmet from "helmet";
 import { env } from "./config/env.js";
 import authRoutes from "./routes/auth.routes.js";
+import projectRoutes from "./routes/project.routes.js";
+import websiteRoutes from "./routes/website.routes.js";
 
 const app = express();
 
@@ -24,5 +26,7 @@ app.get("/api/health", (_req, res) => {
 });
 
 app.use("/api/auth", authRoutes);
+app.use("/api/projects", projectRoutes);
+app.use("/api/websites", websiteRoutes);
 
 export default app;
