@@ -4,14 +4,7 @@ export async function getProjects(userId: string) {
   return prisma.project.findMany({
     where: { userId },
     include: {
-      websites: {
-        select: {
-          id: true,
-          name: true,
-          url: true,
-          createdAt: true,
-        },
-      },
+      websites: true,
     },
     orderBy: {
       createdAt: "desc",

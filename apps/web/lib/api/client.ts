@@ -27,11 +27,26 @@ export async function apiClient<T>(
     headers,
   });
 
-  const data = await response.json();
-
   if (!response.ok) {
-    throw new Error(data.message ?? "Request failed");
+    let message = "Request failed";
+
+    try {
+      const data = await response.json();
+
+      if (data?.message) {
+        message = data.message;
+      }
+    } catch {
+      // Response has no JSON body.
+    }
+
+    throw new Error(message);
   }
 
-  return data;
+  // 204 No Content has no response body.
+  if (response.status === 204) {
+    return undefined as T;
+  }
+
+  return response.json() as Promise<T>;
 }
