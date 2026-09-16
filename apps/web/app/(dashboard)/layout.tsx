@@ -91,14 +91,6 @@ export default function DashboardLayout({
             })}
 
             <div className="my-6 border-t border-slate-100" />
-
-            <Link
-              href="/settings"
-              className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-100 hover:text-slate-900"
-            >
-              <Settings className="h-4.5 w-4.5" />
-              Settings
-            </Link>
           </nav>
 
           {/* User / Logout */}

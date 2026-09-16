@@ -3,6 +3,7 @@ import {
   createScan,
   getScan,
   getWebsiteScans,
+  compareScans,
 } from "../services/scans/scan.service.js";
 
 export async function startScan(
@@ -59,6 +60,56 @@ export async function listWebsiteScans(
 
     res.status(500).json({
       message: "Failed to load scan history",
+    });
+  }
+}
+
+export async function compareScanResults(req: Request, res: Response) {
+  try {
+    const { baseScanId, currentScanId } = req.query;
+
+    if (typeof baseScanId !== "string" || typeof currentScanId !== "string") {
+      res.status(400).json({
+        message: "baseScanId and currentScanId are required",
+      });
+      return;
+    }
+
+    const comparison = await compareScans(
+      req.user!.id,
+      baseScanId,
+      currentScanId,
+    );
+
+    res.json(comparison);
+  } catch (error) {
+    console.error(error);
+
+    if (error instanceof Error) {
+      if (error.message === "SCANS_NOT_FOUND") {
+        res.status(404).json({
+          message: "Scans not found",
+        });
+        return;
+      }
+
+      if (error.message === "SCANS_NOT_COMPLETED") {
+        res.status(400).json({
+          message: "Both scans must be completed",
+        });
+        return;
+      }
+
+      if (error.message === "DIFFERENT_WEBSITES") {
+        res.status(400).json({
+          message: "Scans must belong to the same website",
+        });
+        return;
+      }
+    }
+
+    res.status(500).json({
+      message: "Failed to compare scans",
     });
   }
 }

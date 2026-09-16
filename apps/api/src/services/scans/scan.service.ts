@@ -76,3 +76,88 @@ export async function getWebsiteScans(userId: string, websiteId: string) {
     },
   });
 }
+
+export async function compareScans(
+  userId: string,
+  baseScanId: string,
+  currentScanId: string,
+) {
+  const scans = await prisma.scan.findMany({
+    where: {
+      id: {
+        in: [baseScanId, currentScanId],
+      },
+      website: {
+        project: {
+          userId,
+        },
+      },
+    },
+    include: {
+      violations: true,
+    },
+  });
+
+  if (scans.length !== 2) {
+    throw new Error("SCANS_NOT_FOUND");
+  }
+
+  const baseScan = scans.find((scan) => scan.id === baseScanId);
+  const currentScan = scans.find((scan) => scan.id === currentScanId);
+
+  if (!baseScan || !currentScan) {
+    throw new Error("SCANS_NOT_FOUND");
+  }
+
+  if (baseScan.status !== "COMPLETED" || currentScan.status !== "COMPLETED") {
+    throw new Error("SCANS_NOT_COMPLETED");
+  }
+
+  if (baseScan.websiteId !== currentScan.websiteId) {
+    throw new Error("DIFFERENT_WEBSITES");
+  }
+
+  const makeKey = (violation: (typeof baseScan.violations)[number]) =>
+    `${violation.ruleId}:${violation.selector}:${violation.html}`;
+
+  const baseMap = new Map(
+    baseScan.violations.map((violation) => [makeKey(violation), violation]),
+  );
+
+  const currentMap = new Map(
+    currentScan.violations.map((violation) => [makeKey(violation), violation]),
+  );
+
+  const fixed = baseScan.violations.filter(
+    (violation) => !currentMap.has(makeKey(violation)),
+  );
+
+  const introduced = currentScan.violations.filter(
+    (violation) => !baseMap.has(makeKey(violation)),
+  );
+
+  const unchanged = currentScan.violations.filter((violation) =>
+    baseMap.has(makeKey(violation)),
+  );
+
+  return {
+    baseScan: {
+      id: baseScan.id,
+      score: baseScan.score,
+      createdAt: baseScan.createdAt,
+    },
+    currentScan: {
+      id: currentScan.id,
+      score: currentScan.score,
+      createdAt: currentScan.createdAt,
+    },
+    summary: {
+      fixed: fixed.length,
+      introduced: introduced.length,
+      unchanged: unchanged.length,
+    },
+    fixed,
+    introduced,
+    unchanged,
+  };
+}

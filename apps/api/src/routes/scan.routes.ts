@@ -4,13 +4,16 @@ import {
   getSingleScan,
   startScan,
   listWebsiteScans,
+  compareScanResults,
 } from "../controllers/scan.controller.js";
 
 const router = Router();
 
 router.use(requireAuth);
 
-router.post("/websites/:websiteId", startScan);
+router.get("/websites/:websiteId", listWebsiteScans);
+
+router.get("/compare", compareScanResults);
 
 router.get("/:id", getSingleScan);
 
