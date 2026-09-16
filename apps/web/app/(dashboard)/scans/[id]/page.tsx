@@ -3,11 +3,11 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
+import { useMemo, useState } from "react";
 import {
   AlertTriangle,
   ArrowLeft,
   CheckCircle2,
-  CircleAlert,
   Code2,
   ExternalLink,
   Globe,
@@ -61,6 +61,45 @@ export default function ScanPage() {
     },
   });
 
+  const pages = scanQuery.data?.pages;
+  const violations = pages?.flatMap((page) => page.violations) ?? [];
+
+  const [severityFilter, setSeverityFilter] = useState<
+    "ALL" | "CRITICAL" | "SERIOUS" | "MODERATE" | "MINOR"
+  >("ALL");
+
+  const [search, setSearch] = useState("");
+
+  const filteredViolations = useMemo(() => {
+    const query = search.trim().toLowerCase();
+
+    return (
+      pages?.flatMap((page) =>
+        page.violations
+          .filter((violation) => {
+            const matchesSeverity =
+              severityFilter === "ALL" || violation.impact === severityFilter;
+
+            const matchesSearch =
+              !query ||
+              violation.ruleId.toLowerCase().includes(query) ||
+              violation.help.toLowerCase().includes(query) ||
+              violation.description.toLowerCase().includes(query) ||
+              violation.wcagTags.some((tag) =>
+                tag.toLowerCase().includes(query),
+              );
+
+            return matchesSeverity && matchesSearch;
+          })
+          .map((violation) => ({
+            ...violation,
+            pageUrl: page.url,
+            pageTitle: page.title,
+          })),
+      ) ?? []
+    );
+  }, [pages, search, severityFilter]);
+
   if (scanQuery.isLoading) {
     return (
       <div className="mx-auto max-w-6xl">
@@ -93,8 +132,6 @@ export default function ScanPage() {
       : running
         ? 10
         : 100;
-
-  const violations = scan.pages.flatMap((page) => page.violations);
 
   const counts = {
     CRITICAL: violations.filter((v) => v.impact === "CRITICAL").length,
@@ -258,54 +295,63 @@ export default function ScanPage() {
               </h2>
 
               <p className="mt-1 text-sm text-slate-500">
-                Issues detected by axe-core across the scanned pages.
+                Filter and inspect the issues detected across your scanned
+                pages.
               </p>
             </div>
 
-            {violations.length === 0 ? (
-              <div className="rounded-xl border border-green-200 bg-green-50 p-8 text-center">
-                <CheckCircle2 className="mx-auto h-8 w-8 text-green-600" />
+            {/* Filters */}
+            <div className="mb-4 flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row">
+              <input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Search rule, issue, or WCAG tag..."
+                className="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+              />
 
-                <h3 className="mt-3 font-semibold text-green-900">
-                  No accessibility violations found
-                </h3>
+              <select
+                value={severityFilter}
+                onChange={(event) =>
+                  setSeverityFilter(
+                    event.target.value as
+                      | "ALL"
+                      | "CRITICAL"
+                      | "SERIOUS"
+                      | "MODERATE"
+                      | "MINOR",
+                  )
+                }
+                className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+              >
+                <option value="ALL">All severities</option>
+                <option value="CRITICAL">Critical</option>
+                <option value="SERIOUS">Serious</option>
+                <option value="MODERATE">Moderate</option>
+                <option value="MINOR">Minor</option>
+              </select>
+            </div>
 
-                <p className="mt-1 text-sm text-green-700">
-                  axe-core did not detect any violations on the scanned pages.
+            <div className="mb-4 text-xs font-medium text-slate-500">
+              Showing {filteredViolations.length} of {violations.length}{" "}
+              {violations.length === 1 ? "issue" : "issues"}
+            </div>
+
+            {filteredViolations.length === 0 ? (
+              <div className="rounded-xl border border-slate-200 bg-white p-12 text-center">
+                <CheckCircle2 className="mx-auto h-8 w-8 text-slate-300" />
+
+                <p className="mt-3 text-sm font-medium text-slate-700">
+                  No matching issues
+                </p>
+
+                <p className="mt-1 text-xs text-slate-400">
+                  Try changing the severity filter or search term.
                 </p>
               </div>
             ) : (
               <div className="space-y-4">
-                {scan.pages.map((page) => (
-                  <div
-                    key={page.id}
-                    className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm"
-                  >
-                    <div className="border-b border-slate-200 bg-slate-50 px-5 py-4">
-                      <div className="flex items-center gap-2">
-                        <GlobeIcon />
-
-                        <div className="min-w-0">
-                          <h3 className="font-semibold text-slate-900">
-                            {page.title || "Untitled page"}
-                          </h3>
-
-                          <p className="mt-0.5 truncate text-xs text-slate-500">
-                            {page.url}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="divide-y divide-slate-100">
-                      {page.violations.map((violation) => (
-                        <ViolationItem
-                          key={violation.id}
-                          violation={violation}
-                        />
-                      ))}
-                    </div>
-                  </div>
+                {filteredViolations.map((violation) => (
+                  <ViolationItem key={violation.id} violation={violation} />
                 ))}
               </div>
             )}
@@ -338,6 +384,7 @@ function ViolationItem({
   violation,
 }: {
   violation: {
+    id: string;
     ruleId: string;
     impact: "CRITICAL" | "SERIOUS" | "MODERATE" | "MINOR";
     description: string;
@@ -346,6 +393,8 @@ function ViolationItem({
     wcagTags: string[];
     selector: string;
     html: string;
+    pageUrl: string;
+    pageTitle: string | null;
   };
 }) {
   return (
@@ -371,6 +420,14 @@ function ViolationItem({
           </h4>
 
           <p className="mt-1 text-sm text-slate-500">{violation.description}</p>
+
+          <div className="mt-3 flex items-center gap-2 text-xs text-slate-400">
+            <Globe className="h-3.5 w-3.5" />
+
+            <span className="truncate">
+              {violation.pageTitle || "Untitled page"}
+            </span>
+          </div>
         </div>
 
         <span className="shrink-0 text-sm font-medium text-blue-600 group-open:hidden">
@@ -383,6 +440,22 @@ function ViolationItem({
       </summary>
 
       <div className="space-y-5 border-t border-slate-100 bg-slate-50 p-5">
+        <div>
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+            Affected page
+          </p>
+
+          <a
+            href={violation.pageUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex max-w-full items-center gap-1 truncate text-sm text-blue-600 hover:text-blue-700"
+          >
+            {violation.pageUrl}
+            <ExternalLink className="h-3.5 w-3.5 shrink-0" />
+          </a>
+        </div>
+
         {/* WCAG tags */}
         <div>
           <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
@@ -447,13 +520,5 @@ function ViolationItem({
         </div>
       </div>
     </details>
-  );
-}
-
-function GlobeIcon() {
-  return (
-    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white">
-      <Globe className="h-4 w-4 text-slate-500" />
-    </div>
   );
 }

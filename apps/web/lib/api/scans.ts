@@ -79,3 +79,28 @@ export async function getScan(token: string, scanId: string): Promise<Scan> {
 
   return "scan" in data ? data.scan : data;
 }
+
+export type ScanHistoryItem = {
+  id: string;
+  type: ScanType;
+  status: ScanStatus;
+  score: number | null;
+  pagesScanned: number;
+  pagesTotal: number;
+  startedAt: string | null;
+  completedAt: string | null;
+  createdAt: string;
+};
+
+export async function getWebsiteScans(
+  token: string,
+  websiteId: string,
+): Promise<ScanHistoryItem[]> {
+  const data = await apiClient<
+    ScanHistoryItem[] | { scans: ScanHistoryItem[] }
+  >(`/scans/websites/${websiteId}`, {
+    token,
+  });
+
+  return Array.isArray(data) ? data : data.scans;
+}

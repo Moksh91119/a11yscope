@@ -1,5 +1,9 @@
 import type { Request, Response } from "express";
-import { createScan, getScan } from "../services/scans/scan.service.js";
+import {
+  createScan,
+  getScan,
+  getWebsiteScans,
+} from "../services/scans/scan.service.js";
 
 export async function startScan(
   req: Request<{ websiteId: string }>,
@@ -40,4 +44,21 @@ export async function getSingleScan(
   }
 
   return res.json({ scan });
+}
+
+export async function listWebsiteScans(
+  req: Request<{ websiteId: string }>,
+  res: Response,
+) {
+  try {
+    const scans = await getWebsiteScans(req.user!.id, req.params.websiteId);
+
+    res.json(scans);
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      message: "Failed to load scan history",
+    });
+  }
 }

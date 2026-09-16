@@ -18,6 +18,7 @@ import { getProject } from "@/lib/api/projects";
 import { createWebsite, deleteWebsite, getWebsites } from "@/lib/api/websites";
 import { startScan } from "@/lib/api/scans";
 import { useRouter } from "next/navigation";
+import { getWebsiteScans } from "@/lib/api/scans";
 
 export default function ProjectDetailsPage() {
   const params = useParams<{ id: string }>();
@@ -209,9 +210,12 @@ export default function ProjectDetailsPage() {
                   </div>
 
                   <div className="min-w-0">
-                    <h3 className="font-semibold text-slate-900">
+                    <Link
+                      href={`/websites/${website.id}`}
+                      className="font-semibold text-slate-900 hover:text-blue-600"
+                    >
                       {website.name}
-                    </h3>
+                    </Link>
 
                     <a
                       href={website.url}

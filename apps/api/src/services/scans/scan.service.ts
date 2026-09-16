@@ -49,3 +49,30 @@ export async function getScan(scanId: string, userId: string) {
     },
   });
 }
+
+export async function getWebsiteScans(userId: string, websiteId: string) {
+  return prisma.scan.findMany({
+    where: {
+      websiteId,
+      website: {
+        project: {
+          userId,
+        },
+      },
+    },
+    select: {
+      id: true,
+      type: true,
+      status: true,
+      score: true,
+      pagesScanned: true,
+      pagesTotal: true,
+      startedAt: true,
+      completedAt: true,
+      createdAt: true,
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+  });
+}

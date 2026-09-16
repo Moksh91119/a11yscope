@@ -45,3 +45,12 @@ export async function deleteWebsite(
     token,
   });
 }
+
+export async function getWebsite(
+  token: string,
+  websiteId: string,
+): Promise<Website> {
+  return apiClient<Website>(`/websites/${websiteId}`, {
+    token,
+  });
+}
