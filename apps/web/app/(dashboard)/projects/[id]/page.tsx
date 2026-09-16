@@ -3,12 +3,21 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, ExternalLink, Globe, Plus, Trash2 } from "lucide-react";
+import {
+  ArrowLeft,
+  ExternalLink,
+  Globe,
+  Plus,
+  Trash2,
+  ScanLine,
+} from "lucide-react";
 import { useState } from "react";
 
 import { getToken } from "@/lib/auth/storage";
 import { getProject } from "@/lib/api/projects";
 import { createWebsite, deleteWebsite, getWebsites } from "@/lib/api/websites";
+import { startScan } from "@/lib/api/scans";
+import { useRouter } from "next/navigation";
 
 export default function ProjectDetailsPage() {
   const params = useParams<{ id: string }>();
@@ -19,6 +28,15 @@ export default function ProjectDetailsPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [name, setName] = useState("");
   const [url, setUrl] = useState("");
+
+  const router = useRouter();
+
+  const scanMutation = useMutation({
+    mutationFn: (websiteId: string) => startScan(token!, websiteId),
+    onSuccess: (scan) => {
+      router.push(`/scans/${scan.id}`);
+    },
+  });
 
   const projectQuery = useQuery({
     queryKey: ["project", projectId],
@@ -207,22 +225,34 @@ export default function ProjectDetailsPage() {
                   </div>
                 </div>
 
-                <button
-                  onClick={() => {
-                    if (
-                      window.confirm(
-                        `Delete "${website.name}"? Its scans will also be deleted.`,
-                      )
-                    ) {
-                      deleteMutation.mutate(website.id);
-                    }
-                  }}
-                  disabled={deleteMutation.isPending}
-                  className="ml-4 rounded-lg p-2 text-slate-400 transition hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
-                  title="Delete website"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
+                <div className="ml-4 flex shrink-0 items-center gap-2">
+                  <button
+                    onClick={() => scanMutation.mutate(website.id)}
+                    disabled={scanMutation.isPending}
+                    className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <ScanLine className="h-4 w-4" />
+
+                    {scanMutation.isPending ? "Starting..." : "Run scan"}
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      if (
+                        window.confirm(
+                          `Delete "${website.name}"? Its scans will also be deleted.`,
+                        )
+                      ) {
+                        deleteMutation.mutate(website.id);
+                      }
+                    }}
+                    disabled={deleteMutation.isPending}
+                    className="rounded-lg p-2 text-slate-400 transition hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+                    title="Delete website"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
             ))}
           </div>

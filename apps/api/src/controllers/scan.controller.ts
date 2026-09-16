@@ -6,19 +6,24 @@ export async function startScan(
   res: Response,
 ) {
   try {
-    const scan = await createScan(req.user!.id, req.params.websiteId);
+    const userId = req.user!.id;
 
-    return res.status(202).json({
-      scan,
-    });
+    const scan = await createScan(userId, req.params.websiteId);
+
+    res.status(201).json(scan);
   } catch (error) {
+    console.error(error);
+
     if (error instanceof Error && error.message === "WEBSITE_NOT_FOUND") {
-      return res.status(404).json({
+      res.status(404).json({
         message: "Website not found",
       });
+      return;
     }
 
-    throw error;
+    res.status(500).json({
+      message: "Failed to start scan",
+    });
   }
 }
 
