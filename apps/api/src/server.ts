@@ -2,10 +2,11 @@ import "dotenv/config";
 
 import { prisma } from "@a11yscope/database";
 import app from "./app.js";
+import { env } from "./config/env.js";
 
-const PORT = process.env.PORT || 4000;
+const PORT = env.PORT;
 
-const server = app.listen(PORT, () => {
+const server = app.listen(PORT, "0.0.0.0", () => {
   console.log(`API running on http://localhost:${PORT}`);
 });
 
