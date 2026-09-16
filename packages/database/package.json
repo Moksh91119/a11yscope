@@ -2,11 +2,15 @@
   "name": "@a11yscope/database",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "./dist/index.js",
   "exports": {
-    ".": "./src/index.ts"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
   },
   "scripts": {
+    "build": "tsc",
     "generate": "prisma generate",
     "migrate": "prisma migrate dev",
     "studio": "prisma studio",
